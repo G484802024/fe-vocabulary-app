@@ -1,10 +1,11 @@
-import type { Term } from './bank.ts';
+import { CHOICE_IDS } from './bank.ts';
+import type { ChoiceId, ExamItem } from './bank.ts';
 
 export const POINTS = 10;
 export const SIZES = [10, 20, 50, 100] as const;
-export const STORAGE_KEY = 'fe-vocabulary-app:v1';
+export const STORAGE_KEY = 'fe-question-bank:v1';
 
-export type Question = { termId: string; optionIds: string[]; answerId?: string };
+export type Question = { itemId: string; optionIds: ChoiceId[]; correctId: ChoiceId; answerId?: ChoiceId };
 type Counts = { answered: number; correct: number };
 export type Practice = {
   id: string;
@@ -36,25 +37,17 @@ export function shuffle<T>(items: readonly T[], random = Math.random): T[] {
   return shuffled;
 }
 
-export function makePractice(bank: readonly Term[], pool: readonly Term[], size: number, label: string, unlimited = false): Practice {
-  const groups = new Map<string, Term[]>();
-  for (const term of bank) {
-    const key = term.category + '/' + term.topic;
-    const group = groups.get(key) ?? [];
-    group.push(term);
-    groups.set(key, group);
-  }
+export function makePractice(pool: readonly ExamItem[], size: number, label: string, unlimited = false): Practice {
   return {
     id: crypto.randomUUID(),
     label,
     index: 0,
     previous: unlimited ? { answered: 0, correct: 0 } : undefined,
-    questions: shuffle(pool).slice(0, size).map(term => {
-      const group = groups.get(term.category + '/' + term.topic) ?? [];
-      const distractors = shuffle(group.filter(other => other.id !== term.id)).slice(0, 3);
-      if (distractors.length !== 3) throw new Error(`词条缺少同主题干扰项 ${term.id}`);
-      return { termId: term.id, optionIds: shuffle([term.id, ...distractors.map(other => other.id)]) };
-    }),
+    questions: shuffle(pool).slice(0, size).map(item => ({
+      itemId: item.id,
+      optionIds: shuffle(CHOICE_IDS),
+      correctId: item.correctId,
+    })),
   };
 }
 
@@ -62,18 +55,18 @@ export function addUnique(list: string[], id: string): string[] {
   return list.includes(id) ? list : [...list, id];
 }
 
-export function recordAnswer(state: Learning, practiceId: string, termId: string, optionId: string): Learning {
+export function recordAnswer(state: Learning, practiceId: string, itemId: string, optionId: ChoiceId): Learning {
   const practice = state.active;
   const question = practice?.questions[practice.index];
-  if (!practice || practice.id !== practiceId || !question || question.termId !== termId ||
+  if (!practice || practice.id !== practiceId || !question || question.itemId !== itemId ||
       question.answerId !== undefined || !question.optionIds.includes(optionId)) return state;
-  const correct = optionId === termId;
+  const correct = optionId === question.correctId;
   return {
     ...state,
     answered: state.answered + 1,
     correct: state.correct + Number(correct),
-    studied: addUnique(state.studied, termId),
-    wrong: correct ? state.wrong : addUnique(state.wrong, termId),
+    studied: addUnique(state.studied, itemId),
+    wrong: correct ? state.wrong : addUnique(state.wrong, itemId),
     active: {
       ...practice,
       questions: practice.questions.map((entry, index) => index === practice.index
@@ -83,10 +76,10 @@ export function recordAnswer(state: Learning, practiceId: string, termId: string
   };
 }
 
-export function advance(state: Learning, practiceId: string, termId: string, date: string, nextCycle?: Question[]): Learning {
+export function advance(state: Learning, practiceId: string, itemId: string, date: string, nextCycle?: Question[]): Learning {
   const practice = state.active;
   const question = practice?.questions[practice.index];
-  if (!practice || practice.id !== practiceId || question?.termId !== termId || !question.answerId) return state;
+  if (!practice || practice.id !== practiceId || question?.itemId !== itemId || !question.answerId) return state;
   if (practice.index + 1 < practice.questions.length) {
     return { ...state, active: { ...practice, index: practice.index + 1 } };
   }
@@ -110,7 +103,7 @@ export function finishPractice(state: Learning, practiceId: string, date: string
 
 export function tally(questions: Question[]) {
   const answered = questions.filter(question => question.answerId !== undefined);
-  return { answered: answered.length, correct: answered.filter(question => question.answerId === question.termId).length };
+  return { answered: answered.length, correct: answered.filter(question => question.answerId === question.correctId).length };
 }
 
 export function practiceCounts(practice: Practice): Counts {
@@ -125,7 +118,7 @@ export function accuracy(correct: number, answered: number): string {
   return answered ? `${Math.round(correct / answered * 100)}%` : '0%';
 }
 
-export function loadLearning(raw: string | null, terms: ReadonlyMap<string, Term>): Learning {
+export function loadLearning(raw: string | null, items: ReadonlyMap<string, ExamItem>): Learning {
   if (!raw) return emptyLearning();
   try {
     const state = { ...emptyLearning(), ...JSON.parse(raw) } as Learning;
@@ -135,10 +128,10 @@ export function loadLearning(raw: string | null, terms: ReadonlyMap<string, Term
     const practice = state.active;
     if (practice && (!Array.isArray(practice.questions) ||
         !Number.isInteger(practice.index) || practice.index < 0 || practice.index >= practice.questions.length ||
-        practice.questions.some(question => !terms.has(question.termId) ||
+        practice.questions.some(question => !items.has(question.itemId) || items.get(question.itemId)?.correctId !== question.correctId ||
           !Array.isArray(question.optionIds) || new Set(question.optionIds).size !== 4 ||
-          question.optionIds.length !== 4 || !question.optionIds.includes(question.termId) ||
-          question.optionIds.some(id => !terms.has(id)) ||
+          question.optionIds.length !== 4 ||
+          question.optionIds.some(id => !CHOICE_IDS.includes(id)) ||
           (question.answerId !== undefined && !question.optionIds.includes(question.answerId))))) {
       return { ...state, active: null };
     }

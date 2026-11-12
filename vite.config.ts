@@ -6,7 +6,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.replaceAll('\\', '/').includes('/src/data/')) return 'vocabulary';
+          if (id.replaceAll('\\', '/').includes('/src/data/')) return 'questions';
         },
       },
     },

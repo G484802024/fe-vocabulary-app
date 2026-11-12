@@ -82,7 +82,7 @@ button svg,.icon-tile svg{flex-shrink:0}
 .size-button span{color:var(--muted);font-size:.76rem}
 .size-button:hover:not(:disabled){border-color:var(--blue);background:var(--blue-tint)}
 .size-button:disabled{opacity:.5}
-.filter-bar{display:flex;gap:10px;margin-bottom:13px}
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:13px}
 .search-box{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 12px;min-height:46px;flex:1;min-width:0;color:var(--muted)}
 .search-box input{width:100%;border:0;background:none;min-height:44px;min-width:0;color:var(--text)}
 .search-box:focus-within{outline:2px solid var(--blue)}
@@ -94,13 +94,16 @@ select{border:1px solid var(--border);border-radius:10px;background:var(--surfac
 .icon-button{min-width:44px;min-height:44px;padding:7px;display:inline-grid;place-items:center;border:1px solid var(--border);border-radius:10px;color:var(--muted);background:var(--surface)}
 .icon-button:hover,.favorite.saved{background:var(--blue-tint);color:var(--blue)}
 .favorite.saved svg{fill:currentColor}
-.term-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px}
-.term-title strong{font-size:1.22rem;overflow-wrap:anywhere}
-.term-title span{color:var(--muted)}
-.english{font-size:.85rem;font-weight:650;color:var(--blue);overflow-wrap:anywhere}
 .term-info p{margin-top:8px;font-size:.94rem}
-.example{border-left:3px solid var(--border);padding-left:9px;color:var(--muted)}
-.example strong{color:var(--text)}
+.item-tags{display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px}
+.source-label,.term-info .source-label{font-size:.8rem;color:var(--muted)}
+.source-label a{color:var(--blue)}
+.item-preview summary{font-size:1.02rem;font-weight:700;cursor:pointer;overflow-wrap:anywhere}
+.item-preview ol{padding-inline-start:1.5rem;margin:9px 0}
+.item-preview li{padding:3px 0;overflow-wrap:anywhere}
+.item-preview li strong{color:var(--green)}
+.term-card .text-button{margin-top:9px}
+.option [lang=ja]{min-width:0;overflow-wrap:anywhere}
 .empty{text-align:center;padding:30px 16px;margin-top:12px}
 .empty .icon-tile{margin:0 auto 9px}
 .empty p{font-size:.9rem;color:var(--muted);margin:7px 0 12px}

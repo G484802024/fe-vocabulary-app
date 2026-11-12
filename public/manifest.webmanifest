@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "FE 基础词汇学习",
-  "short_name": "FE 词汇",
-  "description": "日本基本情報技術者試験的基础 IT 词汇练习",
+  "name": "FE 科目 A 题库",
+  "short_name": "FE 刷题",
+  "description": "日本基本情報技術者試験科目 A 四选一练习",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",

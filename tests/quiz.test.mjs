@@ -2,15 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { accuracy, advance, emptyLearning, finishPractice, loadLearning, practiceCounts, recordAnswer } from '../src/quiz.ts';
 
-const optionIds = ['alpha', 'beta', 'gamma', 'delta'];
-const byId = new Map(optionIds.map(id => [id, { id }]));
+const optionIds = ['1', '2', '3', '4'];
+const byId = new Map([['alpha', { correctId: '1' }], ['beta', { correctId: '2' }]]);
 const setup = (unlimited = false) => ({
   ...emptyLearning(),
   active: {
     id: 'practice',
     label: '练习',
     index: 0,
-    questions: ['alpha', 'beta'].map(termId => ({ termId, optionIds })),
+    questions: ['alpha', 'beta'].map(itemId => ({ itemId, optionIds, correctId: byId.get(itemId).correctId })),
     ...(unlimited && { previous: { answered: 0, correct: 0 } }),
   },
 });
@@ -20,25 +20,25 @@ test('answers are recorded only once, advance requires an answer and stale event
   let state = setup();
   assert.equal(advance(state, 'practice', 'alpha', timestamp), state);
   assert.equal(recordAnswer(state, 'practice', 'alpha', 'invalid'), state);
-  state = recordAnswer(state, 'practice', 'alpha', 'beta');
-  assert.equal(recordAnswer(state, 'practice', 'alpha', 'alpha'), state);
+  state = recordAnswer(state, 'practice', 'alpha', '2');
+  assert.equal(recordAnswer(state, 'practice', 'alpha', '1'), state);
   assert.deepEqual(state.wrong, ['alpha']);
   assert.deepEqual(state.studied, ['alpha']);
   state = advance(state, 'practice', 'alpha', timestamp);
   assert.equal(advance(state, 'practice', 'alpha', timestamp), state);
-  assert.equal(recordAnswer(state, 'old-practice', 'beta', 'beta'), state);
-  state = recordAnswer(state, 'practice', 'beta', 'beta');
+  assert.equal(recordAnswer(state, 'old-practice', 'beta', '2'), state);
+  state = recordAnswer(state, 'practice', 'beta', '2');
   assert.equal(accuracy(state.correct, state.answered), '50%');
   state = advance(state, 'practice', 'beta', timestamp);
   assert.equal(state.active, null);
   assert.deepEqual(state.history, [{ id: 'practice', label: '练习', date: timestamp, total: 2, correct: 1 }]);
 });
 
-test('progress restores the exact choice order and answer, and retains history if a term is removed', () => {
-  const state = recordAnswer(setup(), 'practice', 'alpha', 'delta');
+test('progress restores the exact choice order and answer, and retains history if a question is removed', () => {
+  const state = recordAnswer(setup(), 'practice', 'alpha', '4');
   assert.deepEqual(loadLearning(JSON.stringify(state), byId), state);
   const remaining = new Map(byId);
-  remaining.delete('delta');
+  remaining.delete('beta');
   const restored = loadLearning(JSON.stringify(state), remaining);
   assert.equal(restored.active, null);
   assert.equal(restored.answered, 1);
@@ -50,14 +50,14 @@ test('progress restores the exact choice order and answer, and retains history i
 test('unlimited practice rolls over a shuffled cycle and keeps cumulative counts when finishing', () => {
   let state = setup(true);
   assert.equal(finishPractice(state, 'practice', timestamp), state);
-  state = recordAnswer(state, 'practice', 'alpha', 'alpha');
+  state = recordAnswer(state, 'practice', 'alpha', '1');
   state = advance(state, 'practice', 'alpha', timestamp);
-  state = recordAnswer(state, 'practice', 'beta', 'delta');
+  state = recordAnswer(state, 'practice', 'beta', '4');
   const next = setup().active.questions;
   state = advance(state, 'practice', 'beta', timestamp, next);
   assert.equal(state.active.index, 0);
   assert.deepEqual(practiceCounts(state.active), { answered: 2, correct: 1 });
-  state = recordAnswer(state, 'practice', 'alpha', 'alpha');
+  state = recordAnswer(state, 'practice', 'alpha', '1');
   state = finishPractice(state, 'practice', timestamp);
   assert.equal(state.active, null);
   assert.equal(state.history[0].total, 3);
